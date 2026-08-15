@@ -76,6 +76,8 @@ export interface IngestProgress {
   bytesTotal: number;
   currentFile?: string;
   currentService?: Service;
+  /** Human-readable status line. */
+  message?: string;
 }
 
 /** Returned by a parser for a single source file. */
@@ -89,14 +91,19 @@ export interface ParseResult {
 
 /** Union of messages a worker can pass back to the main thread. */
 export type WorkerRequest =
-  | { kind: 'zip-listing'; file: ArrayBuffer }
-  | { kind: 'zip-extract'; file: ArrayBuffer; entries: ZipEntryRequest[] }
+  | { kind: 'archive-listing'; file: ArrayBuffer; type: ArchiveType }
+  | { kind: 'archive-extract'; file: ArrayBuffer; type: ArchiveType; entries: ZipEntryRequest[] }
   | { kind: 'parse'; fileName: string; text: string };
 
+/** Supported container formats. */
+export type ArchiveType = 'zip' | 'tar' | 'tgz' | 'unknown';
+
 export interface ZipEntryRequest {
-  /** Exact name used by the Unzip onfile callback. */
+  /** Exact name used by the container reader. */
   name: string;
   max?: number;
+  /** Whether this file exceeds the per-file parse cap (extract anyway for listing). */
+  tooLarge?: boolean;
 }
 
 export interface ZipEntryInfo {
@@ -108,7 +115,22 @@ export interface ZipEntryInfo {
 export type WorkerResponse =
   | { kind: 'listing-ready'; entries: ZipEntryInfo[]; sessionId: string }
   | { kind: 'listing-error'; message: string; sessionId: string }
-  | { kind: 'parsed-batch'; results: { name: string; text: string }[]; sessionId: string }
+  | { kind: 'archive-batch'; results: { name: string; text: string }[]; oversized: string[]; sessionId: string }
   | { kind: 'extract-error'; message: string; sessionId: string }
   | { kind: 'parse-error'; message: string }
   | { kind: 'parsed'; result: ParseResult };
+
+/** Sniff a file's container type from its leading bytes. */
+export function sniffArchiveType(buf: Uint8Array): ArchiveType {
+  if (buf.length < 2) return 'unknown';
+  // ZIP: "PK\x03\x04" or "PK\x05\x06"
+  if (buf[0] === 0x50 && buf[1] === 0x4b) return 'zip';
+  // gzip: 0x1f 0x8b
+  if (buf[0] === 0x1f && buf[1] === 0x8b) return 'tgz';
+  // ustar signature at offset 257: "ustar"
+  if (buf.length >= 262) {
+    const sig = new TextDecoder('latin1').decode(buf.subarray(257, 262));
+    if (sig === 'ustar') return 'tar';
+  }
+  return 'unknown';
+}

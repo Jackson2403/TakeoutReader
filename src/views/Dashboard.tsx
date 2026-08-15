@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { clearAll } from '../store/db';
 
 const SERVICE_META: Record<string, { label: string; icon: string; color: string }> = {
@@ -13,27 +13,16 @@ const SERVICE_META: Record<string, { label: string; icon: string; color: string 
 interface Props {
   counts: Record<string, number>;
   refresh: () => Promise<void>;
-  onIngest: (file: File) => void;
+  onIngest: (files: File[]) => void;
 }
 
 export default function Dashboard({ counts, refresh, onIngest }: Props) {
   const [dragOver, setDragOver] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
-  const handleFiles = useCallback(
-    (files: FileList | null) => {
-      if (!files || files.length === 0) return;
-      const file = files[0];
-      setMessage(null);
-      setBusy(true);
-      // The parent's handleIngest is async; run it and then refresh.
-      Promise.resolve(onIngest(file)).catch((e: unknown) =>
-        setMessage(e instanceof Error ? e.message : 'Import failed')
-      ).finally(() => setBusy(false));
-    },
-    [onIngest]
-  );
+  const handleFiles = (files: FileList | Array<File> | null) => {
+    if (!files || files.length === 0) return;
+    onIngest(Array.from(files));
+  };
 
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
@@ -58,21 +47,38 @@ export default function Dashboard({ counts, refresh, onIngest }: Props) {
         <div className="text-5xl mb-4">📦</div>
         <h2 className="text-xl font-semibold text-white">Drop your export archive here</h2>
         <p className="text-sm text-slate-400 mt-2 max-w-md">
-          Google Takeout <code className="text-sky-400">.zip</code>, X/Twitter export, or any
-          social-media archive with JSON. Parsing runs in a background worker so the page stays
-          responsive.
+          Google Takeout <code className="text-sky-400">.zip</code> / <code className="text-sky-400">.tgz</code>, X/Twitter export, or any
+          social-media archive with JSON. Drag multiple files (or a whole folder)
+          at once. Parsing runs in a background worker so the page stays responsive.
         </p>
-        <label className="mt-6 cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium transition-colors">
-          Choose a file
-          <input
-            type="file"
-            accept=".zip,.tgz,.tar,.gz"
-            className="hidden"
-            onChange={(e) => handleFiles(e.target.files)}
-          />
-        </label>
-        {busy && <div className="mt-4 text-sm text-sky-300">Parsing…</div>}
-        {message && <div className="mt-4 text-sm text-red-400">{message}</div>}
+        <div className="mt-6 flex items-center gap-3">
+          <label className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium transition-colors">
+            Choose files
+            <input
+              type="file"
+              multiple
+              accept=".zip,.tgz,.tar,.gz"
+              className="hidden"
+              onChange={(e) => {
+                handleFiles(e.target.files);
+                e.target.value = '';
+              }}
+            />
+          </label>
+          <label className="cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium transition-colors">
+            Choose folder
+            <input
+              type="file"
+              multiple
+              webkitdirectory=""
+              className="hidden"
+              onChange={(e) => {
+                handleFiles(e.target.files);
+                e.target.value = '';
+              }}
+            />
+          </label>
+        </div>
       </div>
 
       {/* Stats */}

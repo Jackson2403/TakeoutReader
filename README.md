@@ -6,13 +6,17 @@ Heavy parsing runs in **Web Workers** so even massive archives don't freeze the 
 
 ## Features
 
-- **Drop a zip / tgz / folder** — streaming extraction so archives aren't loaded wholesale into RAM.
+- **Drop zip / tgz / tar / folder** — multi-file + folder pick; streaming extraction so archives aren't loaded wholesale into RAM.
+- **Content-hash dedup** — re-dropping the same archive skips files already imported.
+- **Live progress** — a real progress bar (bytes / files / phase) while parsing in a background worker.
 - **Google Takeout parsers** — YouTube (watch + search history), My Activity, Location History.
 - **Social export parsers** — Instagram posts, X/Twitter (tweets.js unwrapping).
 - **Generic JSON browser** — any unrecognized file is stored as a searchable document, so nothing is ever unreadable.
+- **Insights & analytics** — activity heatmap, monthly chart, top channels/places, streaks, busiest day/hour.
+- **Location map** — zero-dependency SVG map with clustering, pan/zoom, click-to-inspect.
 - **Offline-first PWA** — parsed data is stored in IndexedDB (Dexie); installable and works with no network.
 - **Full-text search** — MiniSearch with prefix + fuzzy matching over titles, subtitles, and text.
-- **Views** — Dashboard (drop + stats), Files, Timeline (grouped by day), and Search.
+- **Views** — Dashboard (drop + stats), Insights, Map, Files, Timeline, and Search.
 
 ## Getting Started
 

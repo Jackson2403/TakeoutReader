@@ -50,3 +50,20 @@ test('clearAll wipes records and sessions', async () => {
   assert.equal(await db.records.count(), 0);
   assert.equal(await db.sessions.count(), 0);
 });
+
+test('fingerprints table dedupes identical file content', async () => {
+  const { db } = await import('../src/store/db');
+  const { fnv1a } = await import('../src/store/hash');
+  const text = JSON.stringify([{ title: 'Watched X', time: '2020/01/01 00:00:00 UTC' }]);
+  const h = fnv1a(text);
+
+  // Simulate ingest dedup: first write marks the fingerprint, second is skipped.
+  assert.equal(await db.fingerprints.get(h), undefined);
+  await db.fingerprints.put({ hash: h, path: 'watch-history.json' });
+  assert.equal((await db.fingerprints.get(h))?.path, 'watch-history.json');
+
+  // A different file yields a different hash.
+  const h2 = fnv1a(text + '!');
+  assert.notEqual(h, h2);
+  assert.equal(await db.fingerprints.get(h2), undefined);
+});

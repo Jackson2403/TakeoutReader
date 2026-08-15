@@ -1,26 +1,47 @@
-import type { IngestProgress, ArchiveRecord, Service, WorkerResponse, ZipEntryInfo } from '../types';
+import type {
+  IngestProgress,
+  ArchiveRecord,
+  Service,
+  WorkerResponse,
+  ZipEntryInfo,
+  ArchiveType,
+} from '../types';
+import { sniffArchiveType } from '../types';
 import { db, allServices, countByService } from './db';
 import { searchIndex } from './search';
 import { pickParser } from '../parsers';
+import { fnv1a } from './hash';
 
-type Listener = () => void;
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 /** Choose which archive files are JSON (or otherwise parser-relevant). */
 function isImportable(name: string): boolean {
   const lower = name.toLowerCase();
   if (lower.endsWith('.json')) return true;
-  // Twitter exports ship JS that assigns a variable; treat .js as potential data.
   if (lower.endsWith('.js')) return true;
   return false;
 }
 
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+export interface IngestOutcome {
+  imported: number;
+  skipped: number;
+  oversized: string[];
+  services: Service[];
+}
 
-/** Orchestrates the full ingest: list → extract → parse → persist. */
+type Listener = () => void;
+
+/** Orchestrates the full ingest: sniff → list → extract/parse → dedup → persist. */
 export class IngestManager {
   private listeners: Listener[] = [];
-  private progressStore: IngestProgress = { phase: 'listing', done: 0, pending: 0, bytesDone: 0, bytesTotal: 0 };
-  private activeSessionId: string | null = null;
+  private progressStore: IngestProgress = {
+    phase: 'listing',
+    done: 0,
+    pending: 0,
+    bytesDone: 0,
+    bytesTotal: 0,
+    message: 'Starting…',
+  };
 
   private emit() {
     this.listeners.forEach((l) => l());
@@ -42,9 +63,11 @@ export class IngestManager {
     this.emit();
   }
 
-  /** Spawn the zip worker and return post() that resolves on a single response. */
-  private spawnZipWorker(): { worker: Worker; post: (m: unknown) => Promise<WorkerResponse> } {
-    const worker = new Worker(new URL('../workers/zip.worker.ts', import.meta.url), { type: 'module' });
+  /** Spawn the archive worker; post() resolves on a single response. */
+  private spawnWorker(): { worker: Worker; post: (m: unknown) => Promise<WorkerResponse> } {
+    const worker = new Worker(new URL('../workers/zip.worker.ts', import.meta.url), {
+      type: 'module',
+    });
     return {
       worker,
       post: (m) =>
@@ -57,7 +80,7 @@ export class IngestManager {
           const onErr = () => {
             worker.removeEventListener('message', onMsg);
             worker.removeEventListener('error', onErr);
-            reject(new Error('zip worker failed'));
+            reject(new Error('archive worker failed'));
           };
           worker.addEventListener('message', onMsg);
           worker.addEventListener('error', onErr);
@@ -66,86 +89,112 @@ export class IngestManager {
     };
   }
 
-  /**
-   * Ingest a single archive buffer. Steps: list entries, pick JSON files,
-   * extract+parse each in the worker, write records to Dexie and search.
-   */
-  async ingestArchive(fileName: string, buffer: ArrayBuffer, onProgress?: (p: IngestProgress) => void): Promise<void> {
-    const sessionId = this.activeSessionId ?? Math.random().toString(36).slice(2);
-    this.activeSessionId = sessionId;
-    this.setProgress({ phase: 'listing', done: 0, pending: 0, bytesDone: 0, bytesTotal: 0 });
+  /** Ingest one or more archives, aggregating counts across all of them. */
+  async ingestArchives(files: { name: string; buffer: ArrayBuffer }[]): Promise<IngestOutcome> {
+    const outcome: IngestOutcome = { imported: 0, skipped: 0, oversized: [], services: [] };
+    for (const file of files) {
+      const r = await this.ingestOne(file.name, file.buffer);
+      outcome.imported += r.imported;
+      outcome.skipped += r.skipped;
+      outcome.oversized.push(...r.oversized);
+      for (const s of r.services) if (!outcome.services.includes(s)) outcome.services.push(s);
+    }
+    this.setProgress({ phase: 'done', done: 0, pending: 0, message: 'Done' });
+    return outcome;
+  }
+  /** Ingest a single archive: sniff type, list, extract+parse, dedup, persist. */
+  private async ingestOne(fileName: string, buffer: ArrayBuffer): Promise<IngestOutcome> {
+    const outcome: IngestOutcome = { imported: 0, skipped: 0, oversized: [], services: [] };
+    const bytes = new Uint8Array(buffer);
+    const type: ArchiveType = sniffArchiveType(bytes);
+    this.setProgress({
+      phase: 'listing',
+      done: 0,
+      pending: 0,
+      bytesTotal: bytes.length,
+      bytesDone: 0,
+      message: `Reading ${fileName}…`,
+    });
 
-    // 1) List entries
-    const zip = this.spawnZipWorker();
+    const worker = this.spawnWorker();
     try {
-      const listingMsg = await zip.post({ kind: 'zip-listing', file: buffer });
+      const listingMsg = await worker.post({ kind: 'archive-listing', file: buffer, type });
       if (listingMsg.kind === 'listing-error') throw new Error(listingMsg.message);
       const entries = (listingMsg as { kind: 'listing-ready'; entries: ZipEntryInfo[] }).entries;
 
       const importable = entries
-        .filter((e) => isImportable(e.name)) // JSON / JS data files only
+        .filter((e) => isImportable(e.name))
         .filter((e) => !/\.(html?|txt)$/i.test(e.name));
-      this.setProgress({
-        phase: 'extracting',
-        done: 0,
-        pending: importable.length,
-        bytesTotal: entries.reduce((a, e) => a + e.originalSize, 0),
-        bytesDone: 0,
-      });
 
-      let totalRecords = 0;
-      const seenServices = new Set<Service>();
+      this.setProgress({ phase: 'extracting', done: 0, pending: importable.length, message: 'Extracting…' });
+      const totalBytes = entries.reduce((a, e) => a + e.originalSize, 0);
 
-      // 2) Extract + parse each importable file.
       for (let i = 0; i < importable.length; i++) {
         const entry = importable[i];
         this.setProgress({
           currentFile: entry.name,
-          currentService: undefined,
           done: i,
           pending: importable.length - i - 1,
-          bytesDone: Math.min(this.progressStore.bytesTotal, this.progressStore.bytesDone + entry.originalSize),
+          bytesDone: Math.min(totalBytes, this.progressStore.bytesDone + entry.originalSize),
+          message: `Parsing ${entry.name}…`,
         });
 
-        const resp = await zip.post({
-          kind: 'zip-extract',
+        const resp = await worker.post({
+          kind: 'archive-extract',
           file: buffer,
+          type,
           entries: [{ name: entry.name }],
         });
-        if (resp.kind === 'parsed-batch' && resp.results?.length) {
+        if (resp.kind === 'extract-error') throw new Error(resp.message);
+
+        if (resp.kind === 'archive-batch') {
+          for (const oversized of resp.oversized) outcome.oversized.push(oversized);
           for (const { name, text } of resp.results) {
-            const parser = pickParser(name);
-            const result = parser.parse(name, text);
+            // Dedup: skip a file whose decoded content we've already imported.
+            const h = fnv1a(text);
+            const existing = await db.fingerprints.get(h);
+            if (existing) {
+              outcome.skipped += 1;
+              continue;
+            }
+            const result = pickParser(name).parse(name, text);
             const records = result.records.filter(Boolean);
             if (records.length) {
-              // Hallucinate stable ids unique per attempt.
-              const uniq = records.map((r, idx) => ({ ...r, id: `${r.id || 'rec'}:${idx}:${sessionId}` }));
+              const uniq = records.map((r, idx) => ({
+                ...r,
+                id: `${h}:${idx}:${r.service}:${r.type}`,
+              }));
               await db.records.bulkPut(uniq);
+              await db.fingerprints.put({ hash: h, path: name });
               searchIndex.addAll(uniq);
-              seenServices.add(records[0].service);
-              totalRecords += records.length;
-              this.setProgress({ currentService: records[0].service, done: i, pending: importable.length - i - 1 });
+              const svc = records[0].service;
+              if (!outcome.services.includes(svc)) outcome.services.push(svc);
+              outcome.imported += records.length;
+              this.setProgress({ currentService: svc });
             }
           }
         }
-        await sleep(0); // flush progress
+        await sleep(0);
       }
 
-      // 3) Record a session + finish.
-      const services = [...seenServices];
       await db.sessions.put({
         name: fileName,
         createdAt: Date.now(),
         fileCount: importable.length,
-        recordCount: totalRecords,
-        services,
+        recordCount: outcome.imported,
+        services: outcome.services,
       });
-      this.setProgress({ phase: 'done', done: importable.length, pending: 0, currentFile: undefined, currentService: undefined });
-      onProgress?.(this.progressStore);
+      this.setProgress({
+        phase: 'done',
+        done: importable.length,
+        pending: 0,
+        currentFile: undefined,
+        message: `${fileName} complete`,
+      });
     } finally {
-      zip.worker.terminate();
-      this.activeSessionId = null;
+      worker.worker.terminate();
     }
+    return outcome;
   }
 
   /** Rebuild the MiniSearch index from everything in Dexie. */
