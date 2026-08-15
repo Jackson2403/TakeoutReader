@@ -1,8 +1,34 @@
 # TakeoutReader
 
-A visual, fully-offline browser for your archived data. Drop a **Google Takeout** or social-media export `.zip` into the app and it turns the unreadable JSON back into a beautiful, searchable, timeline-driven dashboard of your digital memories.
+<p align="center">
+  <img src="public/favicon.svg" width="120" height="120" alt="TakeoutReader" />
+</p>
 
-Heavy parsing runs in **Web Workers** so even massive archives don't freeze the browser.
+<p align="center">
+  <strong>Turn your archived data back into memories.</strong><br/>
+  A visual, fully-offline browser for Google Takeout &amp; social-media export archives.
+</p>
+
+<p align="center">
+  <a href="#"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg" /></a>
+  <a href="#"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white" /></a>
+  <a href="#"><img alt="Offline-first PWA" src="https://img.shields.io/badge/PWA-offline--first-64748b" /></a>
+  <a href="#"><img alt="tests" src="https://img.shields.io/badge/tests-34%20unit%20%E2%9C%93%20%7C%204%20e2e%20%E2%9C%93-brightgreen" /></a>
+</p>
+
+---
+
+## Why this exists
+
+Companies hand over your data to comply with data-portability laws — and then it
+sits in unreadable JSON. **TakeoutReader changes that.** Drop in the archive and the
+app parses it locally, then renders a searchable, timeline-driven dashboard of your
+actual digital life: the videos you watched, the places you went, the activity you
+forgot you had. Nothing ever leaves your browser.
+
+- **Heavy parsing runs in Web Workers**, so even massive archives don't freeze the page.
+- **Fully offline-first** — data lives in IndexedDB, installable as a PWA.
+- **Privacy by design** — no account, no server, no telemetry.
 
 ## Features
 
@@ -14,15 +40,23 @@ Heavy parsing runs in **Web Workers** so even massive archives don't freeze the 
 - **Generic JSON browser** — any unrecognized file is stored as a searchable document, so nothing is ever unreadable.
 - **Insights & analytics** — activity heatmap, monthly chart, top channels/places, streaks, busiest day/hour.
 - **Location map** — zero-dependency SVG map with clustering, pan/zoom, click-to-inspect.
-- **Offline-first PWA** — parsed data is stored in IndexedDB (Dexie); installable and works with no network.
 - **Full-text search** — MiniSearch with prefix + fuzzy matching, service + date-range filters, facet counts, and query-term highlighting.
 - **Timeline** — grouped by day, service + date-range filters, a month heatmap calendar, and scroll-to-load infinite paging.
 - **Export** — download your data as a self-contained HTML report, Markdown, or JSON (100% local Blob).
 - **Light/dark theme** — persisted toggle respecting your OS preference.
 - **Keyboard shortcuts** — `1–6` switch views, `/` searches.
-- **PWA update prompt** — get notified and update in place when a new version is released.
 
-## Getting Started
+---
+
+## Table of contents
+
+- [Getting Started](#getting-started)
+- [Data sources supported](#data-sources-supported)
+- [Architecture](#architecture)
+- [Scripts](#scripts)
+- [Contributing](#contributing)
+- [License](#license)
+
 
 ```bash
 npm install
@@ -65,6 +99,15 @@ App (React)
 | `npm run preview` | Preview the production build |
 | `npm run e2e` | Build + run the Playwright end-to-end suite (requires `npx playwright install`) |
 
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
+All participants agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+- 🐞 [Open a bug report](https://github.com/Jackson2403/TakeoutReader/issues/new?labels=bug)
+- ✨ [Request a feature](https://github.com/Jackson2403/TakeoutReader/issues/new?labels=enhancement)
+- 🔐 Report security issues privately — see [SECURITY.md](SECURITY.md)
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
