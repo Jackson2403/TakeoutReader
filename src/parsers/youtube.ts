@@ -42,6 +42,8 @@ function parseEntries(fileName: string, text: string): { records: ParseResult['r
         text: e.details?.join(' '),
         payload: e,
         sourceFile: fileName,
+        // The first subtitle is typically the channel / channel name in YouTube history.
+        facets: { channel: e.subtitles?.[0]?.name || undefined },
       });
     })
     .filter((r): r is NonNullable<typeof r> => Boolean(r));

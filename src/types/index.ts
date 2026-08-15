@@ -30,6 +30,19 @@ export interface ArchiveRecord {
   payload: unknown;
   /** Archive path this came from. */
   sourceFile: string;
+  /** Optional typed facets used by the analytics engine. */
+  facets?: {
+    /** e.g. YouTube channel name, media author. */
+    channel?: string;
+    /** e.g. location place name. */
+    place?: string;
+    /** Duration in ms (e.g. video length, place visit length). */
+    durationMs?: number;
+    /** A count associated with the record (e.g. star count, play count). */
+    count?: number;
+    /** Engagement count (likes / retweets) for ranking "top" content. */
+    engagement?: number;
+  };
 }
 
 /** A directory-like node in the generic file browser tree. */

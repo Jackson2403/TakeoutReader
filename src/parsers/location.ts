@@ -44,6 +44,17 @@ function toIso(ms: number | undefined): string {
   return ms ? new Date(ms).toISOString() : '';
 }
 
+/** Human-readable duration, e.g. "2h 5m" / "45m" / "30s". */
+function formatDuration(ms: number): string {
+  const totalSec = Math.round(ms / 1000);
+  if (totalSec < 60) return `${totalSec}s`;
+  const totalMin = Math.floor(totalSec / 60);
+  if (totalMin < 60) return `${totalMin}m`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
 function visitGeocode(pv: PlaceVisit): { lat: number; lng: number } | null {
   const { latitudeE7, longitudeE7 } = pv.location ?? {};
   if (latitudeE7 != null && longitudeE7 != null) {
@@ -86,13 +97,15 @@ function buildRecords(fileName: string, data: unknown): { records: ArchiveRecord
           const geo = visitGeocode(seg.placeVisit);
           const name = seg.placeVisit.location?.name;
           const address = seg.placeVisit.location?.address;
+          const durationMs = end != null && start != null ? Math.max(0, end - start) : undefined;
           const rec = makeRecord('location', 'visit', start, name || 'Place visit', {
             subtitle: address,
-            text: `Visited at ${toIso(start)}${end ? ` · left ${toIso(end)}` : ''}`.trim(),
+            text: `Visited at ${toIso(start)}${durationMs != null ? ` · for ${formatDuration(durationMs)}` : ''}`.trim(),
             payload: seg,
             sourceFile: fileName,
             lat: geo?.lat,
             lng: geo?.lng,
+            facets: { place: name || undefined, durationMs },
           });
           if (rec) records.push(rec);
         } else if (seg.activitySegment) {
@@ -104,11 +117,13 @@ function buildRecords(fileName: string, data: unknown): { records: ArchiveRecord
           const from = seg.activitySegment.startLocation?.address ?? 'unknown';
           const to = seg.activitySegment.endLocation?.address ?? 'unknown';
           const label = top.replace(/_/g, ' ');
+          const durationMs = end != null && start != null ? Math.max(0, end - start) : undefined;
           const rec = makeRecord('location', 'move', start, `${label} · ${from} → ${to}`, {
             subtitle: label,
-            text: `${from} → ${to}`,
+            text: `${from} → ${to}${durationMs != null ? ` · ${formatDuration(durationMs)}` : ''}`,
             payload: seg,
             sourceFile: fileName,
+            facets: { place: `${from} → ${to}`, durationMs },
           });
           if (rec) records.push(rec);
         }
