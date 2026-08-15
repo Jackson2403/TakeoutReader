@@ -39,7 +39,7 @@ test.describe('TakeoutReader end-to-end', () => {
     await expect(page.getByText(/Intro to pasta making/)).toBeVisible({ timeout: 10000 });
   });
 
-  test('riduplicate re-import of the same zip is skipped as duplicate', async ({ page }) => {
+  test('reduplicating re-import of the same zip is skipped as duplicate', async ({ page }) => {
     const input = page.locator('[data-testid="file-input"]');
     await input.setInputFiles({ name: 'takeout.zip', mimeType: 'application/zip', buffer: TAKE_OUT_ZIP });
     await expect(page.getByText(/records imported/)).toBeVisible({ timeout: 20000 });
