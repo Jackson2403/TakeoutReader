@@ -67,3 +67,38 @@ test('fingerprints table dedupes identical file content', async () => {
   assert.notEqual(h, h2);
   assert.equal(await db.fingerprints.get(h2), undefined);
 });
+
+test('search honors service and date filters', async () => {
+  const { searchIndex } = await import('../src/store/search');
+  const rec = (id: string, title: string, service: string, ts: number) => ({
+    id,
+    service: service as any,
+    type: 'watch',
+    timestamp: ts,
+    title,
+    payload: {},
+    sourceFile: 'w.json',
+  });
+  searchIndex.reset([
+    rec('a', 'pasta recipe', 'youtube', new Date('2021-01-01').getTime()),
+    rec('b', 'pasta places italy', 'activity', new Date('2022-06-01').getTime()),
+    rec('c', 'pasta restaurant', 'location', new Date('2023-01-01').getTime()),
+  ]);
+
+  const all = searchIndex.search('pasta');
+  assert.equal(all.length, 3);
+
+  const youtube = searchIndex.search('pasta', { filters: { service: 'youtube' } });
+  assert.equal(youtube.length, 1);
+  assert.equal(youtube[0].id, 'a');
+
+  const before2022 = searchIndex.search('pasta', { filters: { to: new Date('2021-12-31').getTime() } });
+  assert.equal(before2022.length, 1);
+  assert.equal(before2022[0].id, 'a');
+
+  const from2022 = searchIndex.search('pasta', { filters: { from: new Date('2022-01-01').getTime() } });
+  assert.equal(from2022.length, 2);
+
+  // Query terms are returned for highlighting.
+  assert.ok((all[0] as any).queryTerms && (all[0] as any).queryTerms.includes('pasta'));
+});

@@ -15,8 +15,8 @@ Heavy parsing runs in **Web Workers** so even massive archives don't freeze the 
 - **Insights & analytics** — activity heatmap, monthly chart, top channels/places, streaks, busiest day/hour.
 - **Location map** — zero-dependency SVG map with clustering, pan/zoom, click-to-inspect.
 - **Offline-first PWA** — parsed data is stored in IndexedDB (Dexie); installable and works with no network.
-- **Full-text search** — MiniSearch with prefix + fuzzy matching over titles, subtitles, and text.
-- **Views** — Dashboard (drop + stats), Insights, Map, Files, Timeline, and Search.
+- **Full-text search** — MiniSearch with prefix + fuzzy matching, service + date-range filters, facet counts, and query-term highlighting.
+- **Timeline** — grouped by day, service + date-range filters, a month heatmap calendar, and scroll-to-load infinite paging.
 
 ## Getting Started
 
