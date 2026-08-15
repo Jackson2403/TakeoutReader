@@ -10,10 +10,16 @@
 </p>
 
 <p align="center">
-  <a href="#"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg" /></a>
-  <a href="#"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white" /></a>
-  <a href="#"><img alt="Offline-first PWA" src="https://img.shields.io/badge/PWA-offline--first-64748b" /></a>
-  <a href="#"><img alt="tests" src="https://img.shields.io/badge/tests-34%20unit%20%E2%9C%93%20%7C%204%20e2e%20%E2%9C%93-brightgreen" /></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg" /></a>
+  <a href="https://github.com/Jackson2403/TakeoutReader"><img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white" /></a>
+  <a href="https://github.com/Jackson2403/TakeoutReader"><img alt="Offline-first PWA" src="https://img.shields.io/badge/PWA-offline--first-64748b" /></a>
+  <a href="https://github.com/Jackson2403/TakeoutReader/actions"><img alt="CI" src="https://img.shields.io/badge/CI-green?logo=githubactions&logoColor=white" /></a>
+</p>
+
+<p align="center">
+  <a href="https://jackson2403.github.io/TakeoutReader/">🚀 Try the live demo (GitHub Pages)</a>
+  &nbsp;·&nbsp;
+  <a href="#getting-started">Run locally</a>
 </p>
 
 ---
