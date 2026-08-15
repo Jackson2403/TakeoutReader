@@ -7,8 +7,9 @@ import SearchView from './views/Search';
 import Timeline from './views/Timeline';
 import Files from './views/Files';
 import Insights from './views/Insights';
+import MapView from './views/MapView';
 
-type Tab = 'dashboard' | 'insights' | 'search' | 'timeline' | 'files';
+type Tab = 'dashboard' | 'insights' | 'map' | 'search' | 'timeline' | 'files';
 
 interface AppState {
   counts: Record<string, number>;
@@ -44,6 +45,7 @@ export default function App() {
             [
               ['dashboard', 'Dashboard'],
               ['insights', 'Insights'],
+              ['map', 'Map'],
               ['files', 'Files'],
               ['timeline', 'Timeline'],
               ['search', 'Search'],
@@ -77,6 +79,7 @@ export default function App() {
         )}
         {tab === 'files' && <Files />}
         {tab === 'insights' && <Insights />}
+        {tab === 'map' && <MapView />}
         {tab === 'timeline' && <Timeline />}
         {tab === 'search' && <SearchView />}
       </main>
