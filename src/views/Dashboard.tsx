@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { clearAll } from '../store/db';
+import { useEffect, useState } from 'react';
+import { clearAll, db } from '../store/db';
+import type { ArchiveRecord } from '../types';
+import ExportMenu from './ExportMenu';
 
 const SERVICE_META: Record<string, { label: string; icon: string; color: string }> = {
   youtube: { label: 'YouTube', icon: '▶️', color: 'from-red-600/60 to-red-800/40' },
@@ -18,6 +20,11 @@ interface Props {
 
 export default function Dashboard({ counts, refresh, onIngest }: Props) {
   const [dragOver, setDragOver] = useState(false);
+  const [records, setRecords] = useState<ArchiveRecord[]>([]);
+
+  useEffect(() => {
+    db.records.toArray().then(setRecords);
+  }, [Object.keys(counts).join(',')]);
 
   const handleFiles = (files: FileList | Array<File> | null) => {
     if (!files || files.length === 0) return;
@@ -28,6 +35,11 @@ export default function Dashboard({ counts, refresh, onIngest }: Props) {
 
   return (
     <div className="space-y-8">
+      {total > 0 && (
+        <div className="flex items-center justify-end">
+          <ExportMenu records={records} title="My Takeout History" baseName="takeout-history" />
+        </div>
+      )}
       {/* Drop zone */}
       <div
         onDragOver={(e) => {

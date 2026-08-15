@@ -17,6 +17,7 @@ Heavy parsing runs in **Web Workers** so even massive archives don't freeze the 
 - **Offline-first PWA** — parsed data is stored in IndexedDB (Dexie); installable and works with no network.
 - **Full-text search** — MiniSearch with prefix + fuzzy matching, service + date-range filters, facet counts, and query-term highlighting.
 - **Timeline** — grouped by day, service + date-range filters, a month heatmap calendar, and scroll-to-load infinite paging.
+- **Export** — download your data as a self-contained HTML report, Markdown, or JSON (100% local Blob).
 
 ## Getting Started
 
