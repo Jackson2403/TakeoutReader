@@ -4,6 +4,10 @@
   color-scheme: dark;
 }
 
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
 html,
 body,
 #root {
@@ -17,6 +21,12 @@ body {
   color: #e2e8f0;
 }
 
+/* Light theme overrides (Surfaces/core text only; component chips keep Tailwind slate bg). */
+html[data-theme="light"] body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
 /* Custom scrollbars for the dashboard panels. */
 *::-webkit-scrollbar {
   width: 10px;
@@ -28,4 +38,11 @@ body {
 }
 *::-webkit-scrollbar-thumb:hover {
   background-color: #334155;
+}
+
+html[data-theme="light"] *::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+}
+html[data-theme="light"] *::-webkit-scrollbar-thumb:hover {
+  background-color: #94a3b8;
 }

@@ -18,6 +18,9 @@ Heavy parsing runs in **Web Workers** so even massive archives don't freeze the 
 - **Full-text search** — MiniSearch with prefix + fuzzy matching, service + date-range filters, facet counts, and query-term highlighting.
 - **Timeline** — grouped by day, service + date-range filters, a month heatmap calendar, and scroll-to-load infinite paging.
 - **Export** — download your data as a self-contained HTML report, Markdown, or JSON (100% local Blob).
+- **Light/dark theme** — persisted toggle respecting your OS preference.
+- **Keyboard shortcuts** — `1–6` switch views, `/` searches.
+- **PWA update prompt** — get notified and update in place when a new version is released.
 
 ## Getting Started
 
@@ -25,15 +28,6 @@ Heavy parsing runs in **Web Workers** so even massive archives don't freeze the 
 npm install
 npm run dev
 ```
-
-### Scripts
-
-| Script | Description |
-| --- | --- |
-| `npm run dev` | Start the Vite dev server |
-| `npm run check` | Type-check only |
-| `npm run build` | Type-check + production build |
-| `npm run preview` | Preview the production build |
 
 ## Data sources supported
 
@@ -51,13 +45,13 @@ npm run dev
 ```
 App (React)
  ├─ DropZone / FilePicker
- ├─ IngestManager            (orchestrates workers, reports progress)
- ├─ Web Workers
- │   ├─ zip.worker.ts        (fflate Unzip → stream file entries)
- │   └─ parse.worker.ts      (detect format → parse JSON → normalized records)
+ ├─ IngestManager            (orchestrates worker, dedup, progress)
+ ├─ Web Worker (zip.worker.ts)
+ │   ├─ zip / tar / tgz  (streamed via fflate + minimal tar reader)
+ │   └─ → decoded file text, oversized-warning
  ├─ Parsers                  (youtube, activity, location, instagram, twitter, generic)
- ├─ Store (Dexie/IndexedDB)  (records, files, sessions)
- └─ Views                    (Dashboard, Files, Timeline, Search)
+ ├─ Store (Dexie/IndexedDB)  (records, sessions, fingerprints) + MiniSearch
+ └─ Views                    (Dashboard, Insights, Map, Files, Timeline, Search)
 ```
 
 ## Scripts
@@ -69,6 +63,7 @@ App (React)
 | `npm run test` | Run the unit/integration test suite (`node:test` + tsx) |
 | `npm run build` | Type-check + production build (incl. PWA service worker) |
 | `npm run preview` | Preview the production build |
+| `npm run e2e` | Build + run the Playwright end-to-end suite (requires `npx playwright install`) |
 
 ## License
 

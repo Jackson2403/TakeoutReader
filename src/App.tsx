@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { countByService, allServices } from './store/db';
 import { ingestManager, type IngestOutcome } from './store/ingest';
 import type { Service, IngestProgress } from './types';
+import { useTheme } from './useTheme';
+import { subscribeUpdate, applyUpdate, type UpdateState } from './updatePrompt';
 import Dashboard from './views/Dashboard';
 import SearchView from './views/Search';
 import Timeline from './views/Timeline';
@@ -10,6 +12,8 @@ import Insights from './views/Insights';
 import MapView from './views/MapView';
 
 type Tab = 'dashboard' | 'insights' | 'map' | 'search' | 'timeline' | 'files';
+
+const TAB_ORDER: Tab[] = ['dashboard', 'insights', 'map', 'files', 'timeline', 'search'];
 
 interface AppState {
   counts: Record<string, number>;
@@ -22,6 +26,8 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<IngestProgress | null>(null);
   const [outcomeMsg, setOutcomeMsg] = useState<string | null>(null);
+  const [updateState, setUpdateState] = useState<UpdateState>({ ready: false });
+  const { theme, toggle } = useTheme();
 
   const refresh = async () => {
     const [counts, services] = await Promise.all([countByService(), allServices()]);
@@ -31,7 +37,32 @@ export default function App() {
   useEffect(() => {
     refresh();
     const unsub = ingestManager.onUpdate(() => setProgress(ingestManager.progress));
-    return unsub;
+    const unsubUpdate = subscribeUpdate(setUpdateState);
+    return () => {
+      unsub();
+      unsubUpdate();
+    };
+  }, []);
+
+  // Keyboard shortcuts: digits 1-6 switch tabs, "/" focuses search.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = document.activeElement as HTMLElement | null;
+      const tag = el?.tagName;
+      const typing = tag === 'INPUT' || tag === 'TEXTAREA' || !!el?.isContentEditable;
+      if (typing) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        setTab('search');
+        return;
+      }
+      const idx = Number(e.key);
+      if (idx >= 1 && idx <= TAB_ORDER.length) {
+        setTab(TAB_ORDER[idx - 1]);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   return (
@@ -66,7 +97,26 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <div className="flex items-center gap-2 pl-2">
+          <button
+            onClick={toggle}
+            title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+            className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-base"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+        </div>
       </header>
+
+      {updateState.ready && (
+        <div className="px-6 py-2 bg-amber-950/60 border-b border-amber-900 text-sm text-amber-200 flex items-center justify-between gap-3">
+          <span>A new version is available.</span>
+          <button onClick={applyUpdate} className="px-3 py-1 rounded-lg bg-amber-600 text-white hover:bg-amber-500">
+            Update now
+          </button>
+        </div>
+      )}
 
       <main className="flex-1 px-6 py-6 max-w-7xl w-full mx-auto">
         {busy && (
@@ -115,7 +165,8 @@ export default function App() {
       </main>
 
       <footer className="text-center text-xs text-slate-500 py-4">
-        Everything stays on your device. No data ever leaves the browser.
+        Everything stays on your device · no data ever leaves the browser.
+        <span className="block sm:inline sm:pl-1 text-slate-600">Shortcuts: 1–6 switch views · <kbd className="text-slate-400">/</kbd> search</span>
       </footer>
     </div>
   );

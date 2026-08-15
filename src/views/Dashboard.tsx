@@ -69,6 +69,7 @@ export default function Dashboard({ counts, refresh, onIngest }: Props) {
             <input
               type="file"
               multiple
+              data-testid="file-input"
               accept=".zip,.tgz,.tar,.gz"
               className="hidden"
               onChange={(e) => {

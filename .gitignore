@@ -6,3 +6,5 @@ dev-dist
 .env.*
 .DS_Store
 *.tsbuildinfo
+playwright-report
+test-results
