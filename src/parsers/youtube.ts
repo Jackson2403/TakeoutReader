@@ -32,7 +32,7 @@ function parseEntries(fileName: string, text: string): { records: ParseResult['r
 
   const records = entries
     .map((e) => {
-      const title = (e.title ?? '').replace(/^(Watched|Searched) /i, '');
+      const title = (e.title ?? '').replace(/^(Watched|Searched for|Searched|Visited) /i, '');
       const ts = toEpochMs(e.time);
       const url = e.titleUrl;
       const subtitle = e.subtitles?.[0]?.name ?? e.details?.[0];

@@ -123,3 +123,18 @@ test('twitterParser unwraps tweets.js and reads tweets', () => {
   assert.ok((r.records[0].text as string).includes('first tweet'));
   assert.ok(r.records[0].timestamp > 0);
 });
+
+test('instagramParser unwraps wrapped { photos: [...] } exports', () => {
+  const r = instagramParser.parse('instagram/media.json', JSON.stringify({
+    photos: [{ title: 'Wrapped post', taken_at: 1620000000, media: ['https://insta/w.jpg'] }],
+  }));
+  assert.equal(r.records.length, 1);
+  assert.equal(r.records[0].url, 'https://insta/w.jpg');
+});
+
+test('youtubeParser strips "Searched for" prefix', () => {
+  const r = youtubeParser.parse('watch-history.json', JSON.stringify([
+    { header: 'YouTube', title: 'Searched for sourdough', time: '2021/04/02 08:00:00 UTC' },
+  ]));
+  assert.equal(r.records[0].title, 'sourdough');
+});

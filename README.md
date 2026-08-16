@@ -32,18 +32,18 @@ app parses it locally, then renders a searchable, timeline-driven dashboard of y
 actual digital life: the videos you watched, the places you went, the activity you
 forgot you had. Nothing ever leaves your browser.
 
-- **Heavy parsing runs in Web Workers**, so even massive archives don't freeze the page.
+- **Heavy parsing runs in Web Workers**, so large archives don't freeze the page.
 - **Fully offline-first** — data lives in IndexedDB, installable as a PWA.
 - **Privacy by design** — no account, no server, no telemetry.
 
 ## Features
 
-- **Drop zip / tgz / tar / folder** — multi-file + folder pick; streaming extraction so archives aren't loaded wholesale into RAM.
+- **Drop zip / tgz / tar / folder** — multi-file + folder pick; extraction runs in a background Web Worker to keep the UI responsive.
 - **Content-hash dedup** — re-dropping the same archive skips files already imported.
 - **Live progress** — a real progress bar (bytes / files / phase) while parsing in a background worker.
 - **Google Takeout parsers** — YouTube (watch + search history), My Activity, Location History.
 - **Social export parsers** — Instagram posts, X/Twitter (tweets.js unwrapping).
-- **Generic JSON browser** — any unrecognized file is stored as a searchable document, so nothing is ever unreadable.
+- **Generic JSON browser** — any unrecognized JSON/JS file is stored as a searchable document, so nothing is ever unreadable.
 - **Insights & analytics** — activity heatmap, monthly chart, top channels/places, streaks, busiest day/hour.
 - **Location map** — zero-dependency SVG map with clustering, pan/zoom, click-to-inspect.
 - **Full-text search** — MiniSearch with prefix + fuzzy matching, service + date-range filters, facet counts, and query-term highlighting.
@@ -87,7 +87,7 @@ App (React)
  ├─ DropZone / FilePicker
  ├─ IngestManager            (orchestrates worker, dedup, progress)
  ├─ Web Worker (zip.worker.ts)
- │   ├─ zip / tar / tgz  (streamed via fflate + minimal tar reader)
+ │   ├─ zip / tar / tgz  (fflate + minimal tar reader, run in a worker)
  │   └─ → decoded file text, oversized-warning
  ├─ Parsers                  (youtube, activity, location, instagram, twitter, generic)
  ├─ Store (Dexie/IndexedDB)  (records, sessions, fingerprints) + MiniSearch

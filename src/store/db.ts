@@ -13,15 +13,14 @@ export interface Fingerprint {
 export class TakeoutDB extends Dexie {
   records!: Table<ArchiveRecord, string>;
   sessions!: Table<Session, number>;
-  fileText!: Table<{ key: string; path: string; text: string }, string>;
   fingerprints!: Table<{ hash: string; path: string }, string>;
 
   constructor() {
     super('takeout-reader');
-    this.version(2).stores({
+    // v3 drops the unused `fileText` table (the raw-file browser was never wired up).
+    this.version(3).stores({
       records: 'id, service, type, timestamp, title',
       sessions: '++id, createdAt',
-      fileText: 'key',
       fingerprints: 'hash, path',
     });
   }
@@ -46,7 +45,6 @@ export async function clearAll(): Promise<void> {
   await Promise.all([
     db.records.clear(),
     db.sessions.clear(),
-    db.fileText.clear(),
     db.fingerprints.clear(),
   ]);
 }
